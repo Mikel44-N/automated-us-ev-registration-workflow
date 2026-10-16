@@ -6,6 +6,10 @@ This project automates the processing, validation, analysis, and reporting of U.
 
 The workflow reduces manual data handling by connecting file retrieval, data cleaning, database operations, analytical queries, CSV exports, and dashboard reporting into a coordinated process.
 
+## Dashboard Preview
+
+![U.S. Electric Vehicle Market Overview](images/ev_dashboard.png)
+
 ## Business Problem
 
 Manual data processing can introduce errors, require repetitive effort, and make it difficult to maintain consistent reporting. This project demonstrates how desktop automation and data analysis tools can work together to create a repeatable data-processing workflow with validation checks before production data is refreshed.
@@ -23,6 +27,28 @@ The workflow performs the following steps:
 7. **Run the analysis:** A Python exporter invokes the MySQL command-line client to execute the analysis queries.
 8. **Export results:** Ten analytical result sets are saved as CSV files.
 9. **Visualize the results:** Power BI uses the exported CSV files to populate an EV registration overview dashboard.
+
+## Automation Workflow
+
+### 1. Email Retrieval and Input Preparation
+
+![Email retrieval and input preparation](images/ev_workflow_dashboard_1.png)
+
+### 2. Python Cleaning and Database Connection
+
+![Python cleaning and database connection](images/ev_workflow_dashboard_2.png)
+
+### 3. SQL Staging and Data Validation
+
+![SQL staging and data validation](images/ev_workflow_dashboard_3.png)
+
+### 4. Validation and Automated Analysis
+
+![Validation and automated analysis](images/ev_workflow_dashboard_4.png)
+
+### 5. Workflow Completion
+
+![Workflow completion](images/ev_workflow_dashboard_5.png)
 
 ## Technology Stack
 
