@@ -8,7 +8,7 @@ The workflow reduces manual data handling by connecting file retrieval, data cle
 
 ## Dashboard Preview
 
-![U.S. Electric Vehicle Market Overview](images/ev_dashboard.png)
+![U.S. Electric Vehicle Market Overview](ev_dashboard.png)
 
 ## Business Problem
 
@@ -30,25 +30,15 @@ The workflow performs the following steps:
 
 ## Automation Workflow
 
-### 1. Email Retrieval and Input Preparation
+![Email retrieval and input preparation](ev_workflow_dashboard_1.png)
 
-![Email retrieval and input preparation](images/ev_workflow_dashboard_1.png)
+![Python cleaning and database connection](ev_workflow_dashboard_2.png)
 
-### 2. Python Cleaning and Database Connection
+![SQL staging and data validation](ev_workflow_dashboard_3.png)
 
-![Python cleaning and database connection](images/ev_workflow_dashboard_2.png)
+![Validation and automated analysis](ev_workflow_dashboard_4.png)
 
-### 3. SQL Staging and Data Validation
-
-![SQL staging and data validation](images/ev_workflow_dashboard_3.png)
-
-### 4. Validation and Automated Analysis
-
-![Validation and automated analysis](images/ev_workflow_dashboard_4.png)
-
-### 5. Workflow Completion
-
-![Workflow completion](images/ev_workflow_dashboard_5.png)
+![Workflow completion](ev_workflow_dashboard_5.png)
 
 ## Technology Stack
 
