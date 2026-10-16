@@ -5,29 +5,52 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+import shutil
 
 
 # Keep this script in the same project folder as:
 # ev_automation.cnf and EV_Analysis_Queries_Main.sql
 
 PROJECT_DIR = Path(__file__).resolve().parent
-MYSQL_EXE = Path(os.environ.get("MYSQL_EXE", "mysql"))
+MYSQL_SETTING = os.environ.get("MYSQL_EXE", "mysql")
 OPTIONS_FILE = Path(os.environ.get(
     "MYSQL_OPTIONS_FILE", PROJECT_DIR / "ev_automation.cnf"
 ))
 SQL_FILE = PROJECT_DIR / "EV_Analysis_Queries_Main.sql"
 OUTPUT_DIR = PROJECT_DIR / "EV_Analysis_Results"
 
+def resolve_mysql_executable():
+    candidate = Path(MYSQL_SETTING).expanduser()
+
+    if candidate.is_absolute() or candidate.parent != Path("."):
+        return str(candidate) if candidate.is_file() else None
+
+    return shutil.which(MYSQL_SETTING)
 
 def main():
-    missing = [str(p) for p in (MYSQL_EXE, OPTIONS_FILE, SQL_FILE) if not p.exists()]
-    if missing:
-        print("ERROR: Required file(s) not found:")
-        for item in missing:
-            print(f"  {item}")
-        return 2
+    mysql_exe = resolve_mysql_executable()
+
+if not mysql_exe:
+    print(
+        "ERROR: MySQL command-line client was not found. "
+        "Install it, add it to PATH, or set MYSQL_EXE to its full path."
+    )
+    return 2
+
+missing = [
+    str(path)
+    for path in (OPTIONS_FILE, SQL_FILE)
+    if not path.is_file()
+]
+
+if missing:
+    print("ERROR: Required file(s) not found:")
+    for item in missing:
+        print(f"  {item}")
+    return 2
 
     sql_text = SQL_FILE.read_text(encoding="utf-8-sig")
+    
     # Remove whole-line SQL comments and split the file into statements.
     sql_text = re.sub(r"(?m)^\s*--.*$", "", sql_text)
     statements = [s.strip() for s in sql_text.split(";") if s.strip()]
@@ -43,7 +66,7 @@ def main():
 
     for index, query in enumerate(queries, start=1):
         command = [
-            str(MYSQL_EXE),
+            mysql_exe,
             f"--defaults-extra-file={OPTIONS_FILE}",
             "--batch",
             "--raw",
