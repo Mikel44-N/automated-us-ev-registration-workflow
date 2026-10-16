@@ -1,0 +1,18 @@
+# Private database credentials
+ev_automation.cnf
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local environment and editor files
+.env
+.idea/
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

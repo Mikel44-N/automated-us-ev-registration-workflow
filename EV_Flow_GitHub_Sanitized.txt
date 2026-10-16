@@ -1,0 +1,108 @@
+@@CustomNote: 'Opens Outlook'
+Outlook.Launch Instance=> OutlookAppInstance
+
+@@CustomNote: 'Gets Desktop Path'
+Folder.GetSpecialFolder SpecialFolder: Folder.SpecialFolder.DesktopDirectory SpecialFolderPath=> DesktopFolder
+
+@@CustomNote: 'Create an Input Folder that contains the file'
+Folder.Create FolderPath: DesktopFolder FolderName: $'''EV Automation Input''' Folder=> CreatedInputFolder
+
+@@CustomNote: 'Deletes existing contents in the file that may be unusable'
+Folder.Empty Folder: CreatedInputFolder
+
+@@CustomNote: 'Retrieves the CSV File'
+Outlook.RetrieveEmailMessages.RetrieveEmailsAndSaveAttachments Instance: OutlookAppInstance Account: $'''YOUR_OUTLOOK_EMAIL''' MailFolder: $'''Inbox''' EmailsToRetrieve: Outlook.RetrieveMessagesMode.Unread MarkAsRead: True ReadBodyAsHtml: False SubjectContains: $'''EV Data Test''' SaveAttachmentsInto: CreatedInputFolder Messages=> MonthlyEVEmails
+
+@@CustomNote: 'Creates a Folder and receives the cleaned CSV file'
+Folder.Create FolderPath: DesktopFolder FolderName: $'''EV Automation Output''' Folder=> CreatedDesktopFolder
+
+@@CustomNote: 'Gets the file to the folder for the cleanup process'
+Folder.GetFiles Folder: CreatedInputFolder FileFilter: $'''*''' IncludeSubfolders: False FailOnAccessDenied: True SortBy1: Folder.SortBy.NoSort SortDescending1: False SortBy2: Folder.SortBy.NoSort SortDescending2: False SortBy3: Folder.SortBy.NoSort SortDescending3: False Files=> RetrievedCSVFile
+
+@@CustomNote: 'Retrieves CSV file from the Input folder'
+LOOP FOREACH CurrentCSVFile IN RetrievedCSVFile
+    @@CustomNote: 'Clean the CSV file with Python using the application'
+System.RunApplication.RunApplicationAndWaitToComplete ApplicationPath: $'''<PATH_TO_PYTHON_EXECUTABLE>''' CommandLineArguments: $'''\"<PATH_TO_CLEAN_EV_DATA_PY>\" \"%CurrentCSVFile.FullName%\" \"%CreatedDesktopFolder%\"''' WindowStyle: System.ProcessWindowStyle.Normal Timeout: 0 ProcessId=> PythonCleaningProcessID ExitCode=> PythonCleaningExitCode
+END
+
+@@CustomNote: 'Reads the cleaned file'
+File.ReadFromCSVFile.ReadCSV CSVFile: $'''%CreatedDesktopFolder%\\Vehicle Data - Cleaned.csv''' Encoding: File.CSVEncoding.UTF8 TrimFields: True FirstLineContainsColumnNames: True ColumnsSeparator: File.CSVColumnsSeparator.Comma CSVTable=> CleanedCSVData
+
+@@CustomNote: 'Open connection to the EV automation MySQL database'
+Database.Connect.Connect ConnectionString: $'''Provider=MSDASQL;Password=<YOUR_DATABASE_PASSWORD>;Persist Security Info=True;User ID=<YOUR_DATABASE_USER>;Extended Properties="DRIVER={YOUR_MYSQL_ODBC_DRIVER};SERVER=<YOUR_DATABASE_HOST>;PORT=3306;DATABASE=power_automate_course;USER=<YOUR_DATABASE_USER>;PASSWORD=<YOUR_DATABASE_PASSWORD>";Initial Catalog=power_automate_course''' Connection=> EVDatabaseConnection
+
+@@CustomNote: 'Start a database transaction before clearing and loading the staging table.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''START TRANSACTION;''' Timeout: 30 Result=> TransactionStartResult
+
+@@CustomNote: 'Clear the staging table before loading the newly cleaned EV registration data.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''DELETE FROM power_automate_course.ev_vehicle_registrations_staging;''' Timeout: 30 Result=> StagingClearResult
+
+@@CustomNote: 'Loop through each row of the cleaned CSV data before inserting the vehicle registration records into the staging table.'
+LOOP FOREACH CurrentCSVRow IN CleanedCSVData
+    @@CustomNote: 'Insert each cleaned EV registration record into the staging table, mapping all 13 columns to their corresponding database fields.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''INSERT INTO power_automate_course.ev_vehicle_registrations_staging (
+    State,
+    `Electric (EV)`,
+    `Plug-In Hybrid Electric (PHEV)`,
+    `Hybrid Electric (HEV)`,
+    Biodiesel,
+    `Ethanol/Flex (E85)`,
+    `Compressed Natural Gas (CNG)`,
+    Propane,
+    Hydrogen,
+    Methanol,
+    Gasoline,
+    Diesel,
+    `Unknown Fuel`
+)
+VALUES (
+    \'%CurrentCSVRow['State']%\',
+    %CurrentCSVRow['Electric (EV)']%,
+    %CurrentCSVRow['Plug-In Hybrid Electric (PHEV)']%,
+    %CurrentCSVRow['Hybrid Electric (HEV)']%,
+    %CurrentCSVRow['Biodiesel']%,
+    %CurrentCSVRow['Ethanol/Flex (E85)']%,
+    %CurrentCSVRow['Compressed Natural Gas (CNG)']%,
+    %CurrentCSVRow['Propane']%,
+    %CurrentCSVRow['Hydrogen']%,
+    %CurrentCSVRow['Methanol']%,
+    %CurrentCSVRow['Gasoline']%,
+    %CurrentCSVRow['Diesel']%,
+    %CurrentCSVRow['Unknown Fuel']%
+);''' Timeout: 30 Result=> StagingInsertResult
+END
+
+@@CustomNote: 'Commit the transaction to finalize the staging-table data load before validation and production refresh.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''COMMIT;''' Timeout: 30 Result=> CommitResult
+
+@@CustomNote: 'Validate the staging table by checking that it contains exactly 51 rows, 51 unique states, and a total EV count of 3,555,900. Return PASS only when all three checks succeed; otherwise return FAIL.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''SELECT
+    CASE
+        WHEN COUNT(*) = 51
+         AND COUNT(DISTINCT State) = 51
+         AND SUM(`Electric (EV)`) = 3555900
+        THEN \'PASS\'
+        ELSE \'FAIL\'
+    END AS validation_status
+FROM power_automate_course.ev_vehicle_registrations_staging;''' Timeout: 30 Result=> ValidationResult
+
+@@CustomNote: 'Convert the SQL validation result into text so the IF condition can check whether validation passed.'
+Variables.ConvertDataTableToCSV.DataTableToCSVCommonSeparator DataTable: ValidationResult IncludeColumnNames: False ColumnsSeparator: Variables.CSVColumnsSeparator.SystemDefault CSVText=> ValidationStatusText
+
+@@CustomNote: 'Check whether the validation status is PASS before refreshing the production table.'
+IF ValidationStatusText = $'''PASS''' THEN
+    @@CustomNote: 'Refresh the production EV registration table by calling the stored procedure after staging validation returns PASS.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''CALL power_automate_course.refresh_ev_vehicle_registrations();
+''' Timeout: 30 Result=> ProductionRefreshResult
+    @@CustomNote: 'Verify the production EV registration table after refresh by checking the total row count, number of unique states, and total registered EV count.'
+Database.ExecuteSqlStatement.Execute Connection: EVDatabaseConnection Statement: $'''SELECT
+    COUNT(*) AS total_rows,
+    COUNT(DISTINCT State) AS unique_states,
+    SUM(`Electric (EV)`) AS total_ev
+FROM power_automate_course.ev_vehicle_registrations;''' Timeout: 30 Result=> ProductionResult
+    @@CustomNote: 'Run the EV SQL analysis batch script after the production table has been refreshed and verified.'
+System.RunApplication.RunApplication ApplicationPath: $'''C:\\Windows\\System32\\cmd.exe''' CommandLineArguments: $'''/c \"<PATH_TO_RUN_EV_ANALYSIS_BAT>\"''' WindowStyle: System.ProcessWindowStyle.Hidden ProcessId=> AnalysisScriptProcessID
+END
+
+@@CustomNote: 'Closes Outlook App'
+Outlook.Close Instance: OutlookAppInstance

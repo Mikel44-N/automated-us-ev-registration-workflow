@@ -1,0 +1,4 @@
+[client]
+user=YOUR_MYSQL_USERNAME
+password=YOUR_MYSQL_PASSWORD
+database=power_automate_course
