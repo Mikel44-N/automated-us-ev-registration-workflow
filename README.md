@@ -63,7 +63,7 @@ These figures are specific to the dataset used during development and are not un
 ## Repository Structure
 
 ```text
-Automated US EV Registration Workflow/
+automated-us-ev-registration-workflow/
 ├── .gitignore
 ├── README.md
 ├── clean_ev_data.py
@@ -75,14 +75,25 @@ Automated US EV Registration Workflow/
 ├── US_EV_Market_Analysis_Automation_DB.sql
 ├── ev_automation.cnf.example
 ├── EV_Flow_GitHub_Sanitized.txt
-├── EV_Analysis_Results/
-│   ├── analysis_01.csv
-│   ├── analysis_02.csv
-│   └── ... analysis_10.csv
-├── docs/
-│   ├── EV_Project_Documentation.docx
-│   └── Project Plan for EV Vehicle Automation.docx
-└── US_EV_Vechicle_Registrations_Power_Automate.pbix
+├── EV_Project_Documentation.docx
+├── Project Plan for EV Vehicle Automation.docx
+├── US_EV_Vehicle_Registrations_Power_Automate.pbix
+├── ev_dashboard.png
+├── ev_workflow_dashboard_1.png
+├── ev_workflow_dashboard_2.png
+├── ev_workflow_dashboard_3.png
+├── ev_workflow_dashboard_4.png
+├── ev_workflow_dashboard_5.png
+├── analysis_01.csv
+├── analysis_02.csv
+├── analysis_03.csv
+├── analysis_04.csv
+├── analysis_05.csv
+├── analysis_06.csv
+├── analysis_07.csv
+├── analysis_08.csv
+├── analysis_09.csv
+└── analysis_10.csv
 ```
 
 ## Prerequisites
